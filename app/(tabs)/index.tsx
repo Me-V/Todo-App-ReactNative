@@ -1,75 +1,110 @@
+import { auth } from '@/firebaseConfig';
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  User
+} from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import {
+  SafeAreaView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import className from 'twrnc';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function TabOneScreen() {
+  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-export default function HomeScreen() {
+  // Watch for sign in/out
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (!user) {
+        setEmail('');
+        setPassword('');
+        router.replace('/');
+      }
+    });
+
+    return () => unsubscribe(); // cleanup
+  }, []);
+
+  const signIn = async () => {
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      if (userCred) router.replace('/(tabs)');
+    } catch (error: any) {
+      console.log(error);
+      alert('Sign in failed: ' + error.message);
+    }
+  };
+
+  const signUp = async () => {
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      if (userCred) router.replace('/selectimage');
+    } catch (error: any) {
+      console.log(error);
+      alert('Sign up failed: ' + error.message);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={className`flex-1 items-center justify-center`}>
+      {!currentUser ? (
+        <View style={className`w-full px-6`}>
+          <Text className='text-2xl font-bold mb-4 text-center'>Login</Text>
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            style={className`border border-gray-400 rounded p-3 mb-4`}
+          />
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={className`border border-gray-400 rounded p-3 mb-4`}
+          />
+          <TouchableOpacity style={className`bg-blue-600 rounded p-3 mb-2`} onPress={signIn}>
+            <Text style={className`text-white text-center font-bold`}>Login</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={className`bg-green-600 rounded p-3`} onPress={signUp}>
+            <Text style={className`text-white text-center font-bold`}>Make Account</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={className`items-center`}>
+    {currentUser?.photoURL && (
+      <Image
+        source={{ uri: currentUser.photoURL }}
+        style={className`w-24 h-24 rounded-full mb-4`}
+      />
+    )}
+    <Text className='text-2xl font-bold mb-2'>Welcome</Text>
+    <Text className='text-lg mb-4'>{currentUser?.email}</Text>
+    <TouchableOpacity style={className`bg-red-500 p-3 rounded`} onPress={handleSignOut}>
+      <Text style={className`text-white font-bold`}>Sign Out</Text>
+    </TouchableOpacity>
+  </View>
+      )}
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
