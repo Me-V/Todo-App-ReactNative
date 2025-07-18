@@ -117,14 +117,21 @@ export default function TabOneScreen() {
 
   return (
     <SafeAreaView style={className`flex-1 bg-black px-6`}>
-      <Text style={className`mt-20 text-3xl font-bold text-center mb-6 text-gray-800 text-white`}>Profile Section</Text>
+      {currentUser ? (
+        <Text
+          style={className`mt-20 text-3xl font-bold text-center mb-6 text-gray-800 text-white`}
+        >
+          Profile Section
+        </Text>
+      ) : (
+        <Text
+          style={className`mt-32 text-3xl font-bold text-center mb- text-gray-800 text-white`}
+        >
+          Login
+        </Text>
+      )}
       {!currentUser ? (
-        <View>
-          <Text
-            style={className`text-3xl font-bold text-center mb-6 text-gray-800`}
-          >
-            Welcome Back!
-          </Text>
+        <View style={className`mt-14`}>
           <TextInput
             placeholder="Email"
             value={email}
@@ -158,8 +165,6 @@ export default function TabOneScreen() {
         </View>
       ) : (
         <View style={className`items-center mt-20`}>
-          
-          
           <TouchableOpacity
             onPress={pickImageAndSaveToFirebase}
             activeOpacity={0.8}
@@ -171,7 +176,7 @@ export default function TabOneScreen() {
               />
             ) : (
               <View
-                style={className`w-28 h-28 rounded-full bg-gray-200 mb-3 items-center justify-center shadow`}
+                style={className`ml-11 w-28 h-28 rounded-full bg-gray-200 mb-3 items-center justify-center shadow`}
               >
                 <AntDesign name="user" size={36} color="#888" />
               </View>
@@ -180,7 +185,9 @@ export default function TabOneScreen() {
               Tap to change profile picture
             </Text>
           </TouchableOpacity>
-          <Text style={className`text-xl text-white font-semibold text-center mb-2`}>
+          <Text
+            style={className`text-xl text-white font-semibold text-center mb-2`}
+          >
             Welcome, {currentUser?.email?.split("@")[0]}
           </Text>
           <TouchableOpacity
