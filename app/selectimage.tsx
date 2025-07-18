@@ -16,7 +16,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import className from 'twrnc';
 
@@ -105,49 +105,63 @@ export default function TabOneScreen() {
   };
 
   return (
-    <SafeAreaView style={className`flex-1 items-center justify-center`}>
+    <SafeAreaView style={className`flex-1 bg-black px-6 pt-10`}>
       {!currentUser ? (
-        <View style={className`w-full px-6`}>
-          <Text className='text-2xl font-bold mb-4 text-center'>Login</Text>
+        <View style={className`mt-10`}>
+          <Text style={className`text-3xl font-bold text-center mb-8`}>Welcome Back</Text>
+
           <TextInput
             placeholder="Email"
             value={email}
             onChangeText={setEmail}
-            style={className`border border-gray-400 rounded p-3 mb-4`}
+            style={className`border border-gray-300 rounded-xl px-4 py-3 mb-4 text-base`}
           />
           <TextInput
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            style={className`border border-gray-400 rounded p-3 mb-4`}
+            style={className`border border-gray-300 rounded-xl px-4 py-3 mb-6 text-base`}
           />
-          <TouchableOpacity style={className`bg-blue-600 rounded p-3 mb-2`} onPress={signIn}>
-            <Text style={className`text-white text-center font-bold`}>Login</Text>
+
+          <TouchableOpacity
+            onPress={signIn}
+            style={className`bg-blue-600 py-4 rounded-xl mb-3`}>
+            <Text style={className`text-white text-center font-semibold text-base`}>
+              Sign In
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={className`bg-green-600 rounded p-3`} onPress={signUp}>
-            <Text style={className`text-white text-center font-bold`}>Make Account</Text>
+
+          <TouchableOpacity
+            onPress={signUp}
+            style={className`bg-green-600 py-4 rounded-xl`}>
+            <Text style={className`text-white text-center font-semibold text-base`}>
+              Create Account
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={className`items-center`}>
+        <View style={className`items-center mt-40`}>
           <TouchableOpacity onPress={pickAndSaveImage} activeOpacity={0.8}>
             {profileImage ? (
               <Image
                 source={{ uri: profileImage }}
-                style={className`w-24 h-24 rounded-full mb-2`}
+                style={className`w-38 h-38 rounded-full mb-2 ml-10`}
               />
             ) : (
-              <View style={className`w-24 h-24 rounded-full bg-gray-300 mb-2`} />
+              <View style={className`w-38 h-38 rounded-full bg-gray-400 mb-2 ml-10`} />
             )}
-            <Text style={className`text-xs text-gray-500 mb-4 text-center`}>
-              Tap to change picture
+            <Text style={className`text-sm text-gray-500 text-center mb-6 ml-5 mt-6`}>
+              Select your profile picture
             </Text>
           </TouchableOpacity>
-          <Text className='text-2xl font-bold mb-2'>Welcome</Text>
-          <Text className='text-lg mb-4'>{currentUser?.email}</Text>
-          <TouchableOpacity style={className`bg-red-500 p-3 rounded`} onPress={handleDone}>
-            <Text style={className`text-white font-bold`}>Done</Text>
+
+          <TouchableOpacity
+            style={className`bg-red-500 py-3 px-8 rounded-xl ml-3`}
+            onPress={handleDone}>
+            <Text style={className`text-white text-base font-semibold`}>
+              Continue to To-Do
+            </Text>
           </TouchableOpacity>
         </View>
       )}
