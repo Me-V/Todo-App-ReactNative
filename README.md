@@ -1,43 +1,38 @@
-# Welcome to your Expo app 👋
+# ✅ React Native To-Do App with Firebase
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A simple To-Do app built using **React Native (Expo)** with **Firebase Authentication**, **Profile Picture Upload**, and **Task Management (CRUD)** features.
 
-## Get started
+---
 
-1. Install dependencies
+## 🔧 Tech Stack
 
-   ```bash
-   npm install
-   ```
+- React Native (Expo)
+- Firebase Auth + Realtime Database
+- Expo Router + Image Picker
+- Tailwind CSS (`twrnc`)
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🔐 Firebase Setup
 
-In the output, you'll find options to open the app in a
+1. Create a Firebase project.
+2. Enable Email/Password Auth.
+3. Create a Realtime Database in test mode.
+4. Replace `firebaseConfig.ts` with your Firebase credentials.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 🚀 Running the App
 
 ```bash
-npm run reset-project
+# Install dependencies
+npm install
+
+# Start the Expo app
+npx expo start
+
+#repo link
+https://github.com/Me-V/Todo-App-ReactNative.git
+
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
