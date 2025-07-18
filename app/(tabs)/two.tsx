@@ -1,152 +1,149 @@
 import { getAuth } from 'firebase/auth';
-import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { FlatList, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import tw from 'twrnc';
 import { db } from '../../firebaseConfig';
 
 export default function TabTwoScreen() {
   const [task, setTask] = useState('');
-  const [todos, setTodos] = useState<any>([]);
+  const [todos, setTodos] = useState<any[]>([]);
   const auth = getAuth();
   const user = auth.currentUser;
   const todosCollection = collection(db, 'todos');
 
   useEffect(() => {
-    fetchTodos();
+    if (user) fetchTodos();
   }, [user]);
 
   const fetchTodos = async () => {
-    if (user) {
-      const q = query(todosCollection, where("userId", "==", user.uid));
+    try {
+      const q = query(todosCollection, where('userId', '==', user?.uid));
       const data = await getDocs(q);
       setTodos(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
-    } else {
-      console.log("No user logged in");
+    } catch (error) {
+      console.log('Error fetching todos:', error);
     }
   };
 
   const addTodo = async () => {
-    if (user) {
-      await addDoc(todosCollection, { task, completed: false, userId: user.uid });
+    if (!task.trim()) {
+      Alert.alert('Enter a task first');
+      return;
+    }
+
+    try {
+      await addDoc(todosCollection, {
+        task: task.trim(),
+        completed: false,
+        userId: user?.uid,
+      });
       setTask('');
       fetchTodos();
-    } else {
-      console.log("No user logged in");
+    } catch (error) {
+      console.log('Error adding todo:', error);
     }
   };
 
-  const updateTodo = async (id: string, completed: any) => {
-    const todoDoc = doc(db, 'todos', id);
-    await updateDoc(todoDoc, { completed: !completed });
-    fetchTodos();
+  const updateTodo = async (id: string, completed: boolean) => {
+    try {
+      await updateDoc(doc(db, 'todos', id), {
+        completed: !completed,
+      });
+      fetchTodos();
+    } catch (error) {
+      console.log('Error updating todo:', error);
+    }
   };
 
   const deleteTodo = async (id: string) => {
-    const todoDoc = doc(db, 'todos', id);
-    await deleteDoc(todoDoc);
-    fetchTodos();
+    try {
+      await deleteDoc(doc(db, 'todos', id));
+      fetchTodos();
+    } catch (error) {
+      console.log('Error deleting todo:', error);
+    }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.mainTitle}>Todo List</Text>
-        <View style={styles.inputContainer}>
+    <SafeAreaView style={tw`flex-1 bg-black`}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={tw`flex-1 px-4 pt-4`}
+      >
+        <Text style={tw`text-2xl font-bold text-center text-white mb-4 mt-10`}>
+          My To-Do List
+        </Text>
+
+        <View style={tw`flex-row mb-4 items-center`}>
           <TextInput
-            placeholder="New Task"
             value={task}
-            onChangeText={(text) => setTask(text)}
-            style={styles.input}
+            onChangeText={setTask}
+            placeholder="New task..."
+            style={tw`flex-1 h-12 border border-white rounded-lg px-4 mr-2 bg-white`}
           />
-          <TouchableOpacity style={styles.addButton} onPress={addTodo}>
-            <Text style={styles.buttonText}>Add</Text>
+          <TouchableOpacity
+            onPress={addTodo}
+            style={tw`bg-blue-500 px-4 py-2 rounded-lg`}
+          >
+            <Text style={tw`text-white font-semibold`}>Add</Text>
           </TouchableOpacity>
         </View>
-        {user && <FlatList
+
+        <FlatList
           data={todos}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={tw`pb-4`}
           renderItem={({ item }) => (
-            <View style={styles.todoContainer}>
-              <Text style={{ textDecorationLine: item.completed ? 'line-through' : 'none', flex: 1 }}>{item.task}</Text>
-              <TouchableOpacity style={styles.button} onPress={() => updateTodo(item.id, item.completed)}>
-                <Text style={styles.buttonText}>{item.completed ? "Undo" : "Complete"}</Text>
+            <View style={tw`flex-row items-center my-3`}>
+              <Text
+                style={tw.style(
+                  `flex-1 text-white`,
+                  item.completed && `line-through text-white`
+                )}
+              >
+                {item.task}
+              </Text>
+              <TouchableOpacity
+                onPress={() => updateTodo(item.id, item.completed)}
+                style={tw.style(
+                  `px-3 py-2 rounded-lg mr-2`,
+                  item.completed ? `bg-yellow-500` : `bg-green-500`
+                )}
+              >
+                <Text style={tw`text-white text-xs`}>
+                  {item.completed ? 'Undo' : 'Complete'}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={() => deleteTodo(item.id)}>
-                <Text style={styles.buttonText}>Delete</Text>
+              <TouchableOpacity
+                onPress={() => deleteTodo(item.id)}
+                style={tw`bg-red-500 px-3 py-2 rounded-lg`}
+              >
+                <Text style={tw`text-white text-xs`}>Delete</Text>
               </TouchableOpacity>
             </View>
           )}
-          keyExtractor={(item) => item.id}
-        />}
-      </View>
+        />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  mainTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10, // Adjust spacing as needed
-    color: '#333', // Choose a color that fits your app theme
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    padding: 10,
-    flex: 1, // Adjusted to take available space
-    marginRight: 10, // Add margin to separate input and button
-  },
-  addButton: {
-    padding: 10,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFA726', // Use a distinct color for the add button
-    shadowColor: '#FFA726',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  todoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 10,
-    width: '100%',
-  },
-  button: {
-    padding: 10,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#5C6BC0',
-    shadowColor: '#5C6BC0',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 5,
-    marginLeft: 10,
-  },
-});
