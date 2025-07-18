@@ -1,5 +1,4 @@
-import { auth } from '@/firebaseConfig';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth, database } from '@/firebaseConfig';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -9,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   User
 } from 'firebase/auth';
+import { get, ref, set } from 'firebase/database';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -31,8 +31,7 @@ export default function TabOneScreen() {
       setCurrentUser(user);
 
       if (user) {
-        const savedImage = await AsyncStorage.getItem('profileImage');
-        setProfileImage(savedImage || null);
+        await loadProfileImage(user.uid);
       } else {
         setProfileImage(null);
         setEmail('');
@@ -44,6 +43,19 @@ export default function TabOneScreen() {
     return () => unsubscribe();
   }, []);
 
+  const loadProfileImage = async (uid: string) => {
+    try {
+      const snapshot = await get(ref(database, `users/${uid}/profileImage`));
+      if (snapshot.exists()) {
+        setProfileImage(snapshot.val());
+      } else {
+        setProfileImage(null);
+      }
+    } catch (error) {
+      console.error('Error loading image:', error);
+    }
+  };
+
   const pickAndSaveImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -53,11 +65,14 @@ export default function TabOneScreen() {
         quality: 0.5,
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets?.length > 0) {
         const uri = result.assets[0].uri;
-        await AsyncStorage.setItem('profileImage', uri);
-        setProfileImage(uri);
-        Alert.alert('Success', 'Profile picture updated!');
+
+        if (currentUser?.uid) {
+          await set(ref(database, `users/${currentUser.uid}/profileImage`), uri);
+          setProfileImage(uri);
+          Alert.alert('Success', 'Profile picture updated!');
+        }
       }
     } catch (error) {
       console.log('Image update error:', error);
@@ -86,7 +101,7 @@ export default function TabOneScreen() {
   };
 
   const handleDone = async () => {
-    router.replace('/(tabs)/two')
+    router.replace('/(tabs)/two');
   };
 
   return (

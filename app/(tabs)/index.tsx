@@ -1,5 +1,4 @@
-import { auth } from '@/firebaseConfig';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth, database } from '@/firebaseConfig';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -10,6 +9,7 @@ import {
   signOut,
   User
 } from 'firebase/auth';
+import { get, ref, set } from 'firebase/database';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -32,8 +32,7 @@ export default function TabOneScreen() {
       setCurrentUser(user);
 
       if (user) {
-        const savedImage = await AsyncStorage.getItem('profileImage');
-        setProfileImage(savedImage || null);
+        await loadProfileImage(user.uid);
       } else {
         setProfileImage(null);
         setEmail('');
@@ -45,18 +44,20 @@ export default function TabOneScreen() {
     return () => unsubscribe();
   }, []);
 
-  // ✅ Ensure profile image loads when screen mounts (not just on auth change)
-useEffect(() => {
-  const loadProfileImage = async () => {
-    const savedImage = await AsyncStorage.getItem('profileImage');
-    setProfileImage(savedImage || null);
+  const loadProfileImage = async (uid: string) => {
+    try {
+      const snapshot = await get(ref(database, `users/${uid}/profileImage`));
+      if (snapshot.exists()) {
+        setProfileImage(snapshot.val());
+      } else {
+        setProfileImage(null);
+      }
+    } catch (error) {
+      console.error('Error loading image:', error);
+    }
   };
 
-  loadProfileImage();
-}, []);
-
-
-  const pickImageAndSaveLocally = async () => {
+  const pickImageAndSaveToFirebase = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -65,13 +66,14 @@ useEffect(() => {
         quality: 0.5,
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets?.length > 0) {
         const uri = result.assets[0].uri;
 
-        // Save image locally
-        await AsyncStorage.setItem('profileImage', uri);
-        setProfileImage(uri);
-        Alert.alert('Success', 'Profile picture updated!');
+        if (currentUser?.uid) {
+          await set(ref(database, `users/${currentUser.uid}/profileImage`), uri);
+          setProfileImage(uri);
+          Alert.alert('Success', 'Profile picture updated!');
+        }
       }
     } catch (error) {
       console.log('Image update error:', error);
@@ -102,7 +104,6 @@ useEffect(() => {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      await AsyncStorage.removeItem('profileImage');
     } catch (error) {
       console.error('Sign out failed:', error);
     }
@@ -135,7 +136,7 @@ useEffect(() => {
         </View>
       ) : (
         <View style={className`items-center`}>
-          <TouchableOpacity onPress={pickImageAndSaveLocally} activeOpacity={0.7}>
+          <TouchableOpacity onPress={pickImageAndSaveToFirebase} activeOpacity={0.7}>
             {profileImage ? (
               <Image
                 source={{ uri: profileImage }}
