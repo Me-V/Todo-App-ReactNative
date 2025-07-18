@@ -1,18 +1,50 @@
-import { Ionicons } from '@expo/vector-icons';
+import { auth } from '@/firebaseConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { getAuth, updateProfile } from 'firebase/auth';
-import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
-import React, { useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  User
+} from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import {
+  Alert,
+  SafeAreaView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import className from 'twrnc';
 
-const SelectImage = () => {
-  const [image, setImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const storage = getStorage();
-  const auth = getAuth();
+export default function TabOneScreen() {
+  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
-  const pickImage = async () => {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+
+      if (user) {
+        const savedImage = await AsyncStorage.getItem('profileImage');
+        setProfileImage(savedImage || null);
+      } else {
+        setProfileImage(null);
+        setEmail('');
+        setPassword('');
+        router.replace('/');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const pickAndSaveImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -22,161 +54,88 @@ const SelectImage = () => {
       });
 
       if (!result.canceled) {
-        setImage(result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        await AsyncStorage.setItem('profileImage', uri);
+        setProfileImage(uri);
+        Alert.alert('Success', 'Profile picture updated!');
       }
     } catch (error) {
-      console.log('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick an image');
+      console.log('Image update error:', error);
+      Alert.alert('Error', 'Failed to update profile picture');
     }
   };
 
-  const uploadImage = async () => {
-    if (!image) {
-      Alert.alert('Error', 'Please select an image first');
-      return;
-    }
-
-    if (!auth.currentUser) {
-      Alert.alert('Error', 'User not authenticated');
-      return;
-    }
-
-    setIsLoading(true);
-    
+  const signIn = async () => {
     try {
-      // Upload the image to Firebase Storage
-      const response = await fetch(image);
-      const blob = await response.blob();
-      const storageRef = ref(storage, `profilePics/${auth.currentUser.uid}`);
-      await uploadBytes(storageRef, blob);
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      // Update user profile with the image URL
-      await updateProfile(auth.currentUser, {
-        photoURL: downloadURL
-      });
-      
-      Alert.alert('Success', 'Profile picture updated successfully!');
-      router.replace('/(tabs)'); // Navigate to home screen after successful upload
-    } catch (error) {
-      console.log('Error uploading image:', error);
-      Alert.alert('Error', 'Failed to upload image');
-    } finally {
-      setIsLoading(false);
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      if (userCred) router.replace('/(tabs)');
+    } catch (error: any) {
+      console.log(error);
+      alert('Sign in failed: ' + error.message);
     }
+  };
+
+  const signUp = async () => {
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      if (userCred) router.replace('/selectimage');
+    } catch (error: any) {
+      console.log(error);
+      alert('Sign up failed: ' + error.message);
+    }
+  };
+
+  const handleDone = async () => {
+    router.replace('/(tabs)/two')
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Select a Profile Picture</Text>
-      
-      <TouchableOpacity 
-        style={styles.imageContainer}
-        onPress={pickImage}
-        disabled={isLoading}
-      >
-        {image ? (
-          <Image 
-            source={{ uri: image }} 
-            style={styles.image} 
-            resizeMode="cover"
+    <SafeAreaView style={className`flex-1 items-center justify-center`}>
+      {!currentUser ? (
+        <View style={className`w-full px-6`}>
+          <Text className='text-2xl font-bold mb-4 text-center'>Login</Text>
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            style={className`border border-gray-400 rounded p-3 mb-4`}
           />
-        ) : (
-          <View style={styles.placeholderContainer}>
-            <Ionicons name="camera" size={48} color="#666" />
-            <Text style={styles.placeholderText}>Tap to select an image</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.button, (!image || isLoading) && styles.buttonDisabled]}
-        onPress={uploadImage}
-        disabled={!image || isLoading}
-      >
-        <Text style={styles.buttonText}>
-          {isLoading ? 'Uploading...' : 'Set as Profile Picture'}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.skipButton, isLoading && styles.buttonDisabled]}
-        onPress={() => router.replace('/(tabs)')}
-        disabled={isLoading}
-      >
-        <Text style={styles.skipButtonText}>Skip for now</Text>
-      </TouchableOpacity>
-    </View>
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={className`border border-gray-400 rounded p-3 mb-4`}
+          />
+          <TouchableOpacity style={className`bg-blue-600 rounded p-3 mb-2`} onPress={signIn}>
+            <Text style={className`text-white text-center font-bold`}>Login</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={className`bg-green-600 rounded p-3`} onPress={signUp}>
+            <Text style={className`text-white text-center font-bold`}>Make Account</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={className`items-center`}>
+          <TouchableOpacity onPress={pickAndSaveImage} activeOpacity={0.8}>
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={className`w-24 h-24 rounded-full mb-2`}
+              />
+            ) : (
+              <View style={className`w-24 h-24 rounded-full bg-gray-300 mb-2`} />
+            )}
+            <Text style={className`text-xs text-gray-500 mb-4 text-center`}>
+              Tap to change picture
+            </Text>
+          </TouchableOpacity>
+          <Text className='text-2xl font-bold mb-2'>Welcome</Text>
+          <Text className='text-lg mb-4'>{currentUser?.email}</Text>
+          <TouchableOpacity style={className`bg-red-500 p-3 rounded`} onPress={handleDone}>
+            <Text style={className`text-white font-bold`}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </SafeAreaView>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 30,
-    color: '#333',
-  },
-  imageContainer: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 30,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ddd',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholderContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  placeholderText: {
-    marginTop: 10,
-    color: '#666',
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    marginBottom: 15,
-    width: '100%',
-    maxWidth: 300,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  skipButton: {
-    padding: 10,
-  },
-  skipButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-});
-
-export default SelectImage;
+}

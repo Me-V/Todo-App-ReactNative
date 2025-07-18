@@ -1,5 +1,7 @@
 import { auth } from '@/firebaseConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import {
   createUserWithEmailAndPassword,
@@ -10,6 +12,7 @@ import {
 } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   SafeAreaView,
   Text,
   TextInput,
@@ -22,20 +25,59 @@ export default function TabOneScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
-  // Watch for sign in/out
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (!user) {
+
+      if (user) {
+        const savedImage = await AsyncStorage.getItem('profileImage');
+        setProfileImage(savedImage || null);
+      } else {
+        setProfileImage(null);
         setEmail('');
         setPassword('');
         router.replace('/');
       }
     });
 
-    return () => unsubscribe(); // cleanup
+    return () => unsubscribe();
   }, []);
+
+  // ✅ Ensure profile image loads when screen mounts (not just on auth change)
+useEffect(() => {
+  const loadProfileImage = async () => {
+    const savedImage = await AsyncStorage.getItem('profileImage');
+    setProfileImage(savedImage || null);
+  };
+
+  loadProfileImage();
+}, []);
+
+
+  const pickImageAndSaveLocally = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+
+        // Save image locally
+        await AsyncStorage.setItem('profileImage', uri);
+        setProfileImage(uri);
+        Alert.alert('Success', 'Profile picture updated!');
+      }
+    } catch (error) {
+      console.log('Image update error:', error);
+      Alert.alert('Error', 'Failed to update profile picture');
+    }
+  };
 
   const signIn = async () => {
     try {
@@ -60,6 +102,7 @@ export default function TabOneScreen() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
+      await AsyncStorage.removeItem('profileImage');
     } catch (error) {
       console.error('Sign out failed:', error);
     }
@@ -92,18 +135,25 @@ export default function TabOneScreen() {
         </View>
       ) : (
         <View style={className`items-center`}>
-    {currentUser?.photoURL && (
-      <Image
-        source={{ uri: currentUser.photoURL }}
-        style={className`w-24 h-24 rounded-full mb-4`}
-      />
-    )}
-    <Text className='text-2xl font-bold mb-2'>Welcome</Text>
-    <Text className='text-lg mb-4'>{currentUser?.email}</Text>
-    <TouchableOpacity style={className`bg-red-500 p-3 rounded`} onPress={handleSignOut}>
-      <Text style={className`text-white font-bold`}>Sign Out</Text>
-    </TouchableOpacity>
-  </View>
+          <TouchableOpacity onPress={pickImageAndSaveLocally} activeOpacity={0.7}>
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={className`w-24 h-24 rounded-full mb-2`}
+              />
+            ) : (
+              <View style={className`w-24 h-24 rounded-full bg-gray-300 mb-2`} />
+            )}
+            <Text style={className`text-xs text-gray-500 mb-4 text-center`}>
+              Tap to change picture
+            </Text>
+          </TouchableOpacity>
+          <Text className='text-2xl font-bold mb-2'>Welcome</Text>
+          <Text className='text-lg mb-4'>{currentUser?.email}</Text>
+          <TouchableOpacity style={className`bg-red-500 p-3 rounded`} onPress={handleSignOut}>
+            <Text style={className`text-white font-bold`}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </SafeAreaView>
   );
